@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Index Checker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-row">
+                <h1>Domain Index Checker</h1>
+                <a href="/settings" class="settings-link" title="Settings">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                            stroke="currentColor" stroke-width="2" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                            stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </a>
+            </div>
+            <p class="subtitle">Check Google indexation for your domains</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section class="card">
+                <div class="section-header">
+                    <h2>Enter Domains</h2>
+                    <span class="badge">One per line</span>
+                </div>
+
+                <div class="textarea-wrapper">
+                    <textarea id="domains-input"
+                        placeholder="example.com&#10;anotherdomain.com&#10;yourdomain.org"></textarea>
+                    <div class="textarea-footer">
+                        <span id="domain-count">0 domains</span>
+                        <button class="btn-text" id="clear-btn">Clear</button>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <div class="settings">
+                        <label for="workers">Speed:</label>
+                        <select id="workers">
+                            <option value="1">Slow</option>
+                            <option value="3" selected>Normal</option>
+                            <option value="5">Fast</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" id="check-btn">
+                        Check Indexation
+                    </button>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="card" id="progress-section" style="display: none;">
+                <div class="section-header">
+                    <h2>Progress</h2>
+                    <span class="badge processing" id="progress-badge">0%</span>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+
+                <div class="progress-stats">
+                    <div class="stat">
+                        <span class="stat-value" id="stat-completed">0</span>
+                        <span class="stat-label">Checked</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="stat-total">0</span>
+                        <span class="stat-label">Total</span>
+                    </div>
+                    <div class="stat indexed">
+                        <span class="stat-value" id="stat-indexed">0</span>
+                        <span class="stat-label">Indexed</span>
+                    </div>
+                    <div class="stat not-indexed">
+                        <span class="stat-value" id="stat-not-indexed">0</span>
+                        <span class="stat-label">Not Indexed</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Favorites Section -->
+            <section class="card" id="favorites-section" style="display: none;">
+                <div class="section-header">
+                    <div class="header-left">
+                        <h2>⭐ Favorites</h2>
+                    </div>
+                    <div class="header-actions">
+                        <span class="count-badge" id="favorites-count">0</span>
+                        <button class="btn-icon" id="copy-favorites-btn" title="Copy list">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path
+                                    d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
+                                    stroke="currentColor" stroke-width="2" />
+                            </svg>
+                        </button>
+                        <button class="btn-text" id="clear-favorites-btn">Clear</button>
+                    </div>
+                </div>
+                <div class="domain-list" id="favorites-list">
+                    <div class="empty-state">No favorites yet</div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="results-section" style="display: none;">
+                <!-- Indexed Results -->
+                <div class="card results-card">
+                    <div class="section-header">
+                        <div class="header-left">
+                            <span class="status-dot indexed"></span>
+                            <h2>Indexed</h2>
+                        </div>
+                        <div class="header-actions">
+                            <span class="count-badge indexed" id="indexed-count">0</span>
+                            <button class="btn-icon" id="copy-indexed-btn" title="Copy list">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
+                                        stroke-width="2" />
+                                    <path
+                                        d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
+                                        stroke="currentColor" stroke-width="2" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="domain-list" id="indexed-list">
+                        <div class="empty-state">No indexed domains yet</div>
+                    </div>
+                </div>
+
+                <!-- Not Indexed Results -->
+                <div class="card results-card">
+                    <div class="section-header">
+                        <div class="header-left">
+                            <span class="status-dot not-indexed"></span>
+                            <h2>Not Indexed</h2>
+                        </div>
+                        <div class="header-actions">
+                            <span class="count-badge not-indexed" id="not-indexed-count">0</span>
+                            <button class="btn-icon" id="copy-not-indexed-btn" title="Copy list">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
+                                        stroke-width="2" />
+                                    <path
+                                        d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
+                                        stroke="currentColor" stroke-width="2" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="domain-list" id="not-indexed-list">
+                        <div class="empty-state">No unindexed domains yet</div>
+                    </div>
+                </div>
+
+                <!-- Errors -->
+                <div class="card results-card errors-card" id="errors-card" style="display: none;">
+                    <div class="section-header">
+                        <div class="header-left">
+                            <span class="status-dot error"></span>
+                            <h2>Errors</h2>
+                        </div>
+                        <span class="count-badge error" id="errors-count">0</span>
+                    </div>
+                    <div class="domain-list" id="errors-list"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by ScrapingDog API</p>
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-message"></span>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+
+</html>
