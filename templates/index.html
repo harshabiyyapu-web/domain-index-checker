@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <title>Domain Index Checker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
@@ -17,16 +17,28 @@
         <header class="header">
             <div class="header-row">
                 <h1>Domain Index Checker</h1>
-                <a href="/settings" class="settings-link" title="Settings">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-                            stroke="currentColor" stroke-width="2" />
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-                            stroke="currentColor" stroke-width="2" />
-                    </svg>
-                </a>
+                <div class="header-actions">
+                    <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+                        <svg class="icon-sun" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
+                            <path
+                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        <svg class="icon-moon" viewBox="0 0 24 24" fill="none">
+                            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                    <a href="/settings" class="btn-icon" title="Settings">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </a>
+                </div>
             </div>
             <p class="subtitle">Check Google indexation for your domains</p>
         </header>
@@ -95,21 +107,38 @@
                 </div>
             </section>
 
+            <!-- Bulk Actions -->
+            <section class="card bulk-actions" id="bulk-actions" style="display: none;">
+                <div class="section-header">
+                    <h2>Bulk Actions</h2>
+                </div>
+                <div class="bulk-buttons">
+                    <button class="btn-bulk wayback" id="bulk-wayback-btn">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        Open Wayback (Next 5)
+                    </button>
+                    <span class="bulk-info" id="bulk-info">Showing: 1-5</span>
+                </div>
+            </section>
+
             <!-- Favorites Section -->
             <section class="card" id="favorites-section" style="display: none;">
                 <div class="section-header">
                     <div class="header-left">
-                        <h2>⭐ Favorites</h2>
+                        <span class="status-icon favorite">★</span>
+                        <h2>Favorites</h2>
                     </div>
                     <div class="header-actions">
                         <span class="count-badge" id="favorites-count">0</span>
                         <button class="btn-icon" id="copy-favorites-btn" title="Copy list">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <svg viewBox="0 0 24 24" fill="none">
                                 <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
                                     stroke-width="2" />
-                                <path
-                                    d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
-                                    stroke="currentColor" stroke-width="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor"
+                                    stroke-width="2" />
                             </svg>
                         </button>
                         <button class="btn-text" id="clear-favorites-btn">Clear</button>
@@ -120,69 +149,64 @@
                 </div>
             </section>
 
-            <!-- Results Section -->
-            <section class="results-section" id="results-section" style="display: none;">
-                <!-- Indexed Results -->
-                <div class="card results-card">
-                    <div class="section-header">
-                        <div class="header-left">
-                            <span class="status-dot indexed"></span>
-                            <h2>Indexed</h2>
-                        </div>
-                        <div class="header-actions">
-                            <span class="count-badge indexed" id="indexed-count">0</span>
-                            <button class="btn-icon" id="copy-indexed-btn" title="Copy list">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
-                                        stroke-width="2" />
-                                    <path
-                                        d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
-                                        stroke="currentColor" stroke-width="2" />
-                                </svg>
-                            </button>
-                        </div>
+            <!-- Indexed Domains (Full Width) -->
+            <section class="card results-card" id="indexed-section" style="display: none;">
+                <div class="section-header">
+                    <div class="header-left">
+                        <span class="status-icon indexed">✓</span>
+                        <h2>Indexed Domains</h2>
                     </div>
-                    <div class="domain-list" id="indexed-list">
-                        <div class="empty-state">No indexed domains yet</div>
+                    <div class="header-actions">
+                        <span class="count-badge indexed" id="indexed-count">0</span>
+                        <button class="btn-icon" id="copy-indexed-btn" title="Copy list">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor"
+                                    stroke-width="2" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
+                <div class="domain-list" id="indexed-list">
+                    <div class="empty-state">No indexed domains yet</div>
+                </div>
+            </section>
 
-                <!-- Not Indexed Results -->
-                <div class="card results-card">
-                    <div class="section-header">
-                        <div class="header-left">
-                            <span class="status-dot not-indexed"></span>
-                            <h2>Not Indexed</h2>
-                        </div>
-                        <div class="header-actions">
-                            <span class="count-badge not-indexed" id="not-indexed-count">0</span>
-                            <button class="btn-icon" id="copy-not-indexed-btn" title="Copy list">
-                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
-                                        stroke-width="2" />
-                                    <path
-                                        d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5"
-                                        stroke="currentColor" stroke-width="2" />
-                                </svg>
-                            </button>
-                        </div>
+            <!-- Not Indexed Domains (Full Width) -->
+            <section class="card results-card" id="not-indexed-section" style="display: none;">
+                <div class="section-header">
+                    <div class="header-left">
+                        <span class="status-icon not-indexed">✗</span>
+                        <h2>Not Indexed Domains</h2>
                     </div>
-                    <div class="domain-list" id="not-indexed-list">
-                        <div class="empty-state">No unindexed domains yet</div>
+                    <div class="header-actions">
+                        <span class="count-badge not-indexed" id="not-indexed-count">0</span>
+                        <button class="btn-icon" id="copy-not-indexed-btn" title="Copy list">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor"
+                                    stroke-width="2" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
+                <div class="domain-list" id="not-indexed-list">
+                    <div class="empty-state">No unindexed domains yet</div>
+                </div>
+            </section>
 
-                <!-- Errors -->
-                <div class="card results-card errors-card" id="errors-card" style="display: none;">
-                    <div class="section-header">
-                        <div class="header-left">
-                            <span class="status-dot error"></span>
-                            <h2>Errors</h2>
-                        </div>
-                        <span class="count-badge error" id="errors-count">0</span>
+            <!-- Errors -->
+            <section class="card results-card" id="errors-card" style="display: none;">
+                <div class="section-header">
+                    <div class="header-left">
+                        <span class="status-icon error">!</span>
+                        <h2>Errors</h2>
                     </div>
-                    <div class="domain-list" id="errors-list"></div>
+                    <span class="count-badge error" id="errors-count">0</span>
                 </div>
+                <div class="domain-list" id="errors-list"></div>
             </section>
         </main>
 

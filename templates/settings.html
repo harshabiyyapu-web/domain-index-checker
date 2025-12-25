@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -7,7 +7,7 @@
     <title>Settings - Domain Index Checker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 
@@ -15,15 +15,13 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <div class="header-row">
-                <a href="/" class="back-link">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    Back
-                </a>
-            </div>
+            <a href="/" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                Back to Checker
+            </a>
             <h1>Settings</h1>
             <p class="subtitle">Manage your ScrapingDog API keys</p>
         </header>
@@ -34,23 +32,17 @@
             <section class="card">
                 <div class="section-header">
                     <h2>API Keys</h2>
-                    <span class="badge" id="key-count">0 keys</span>
+                    <span class="count-badge" id="key-count">0 keys</span>
                 </div>
 
-                <p class="description">Add multiple API keys for automatic rotation when limits are reached.</p>
+                <p class="description">Add multiple keys for automatic rotation when limits are reached. Supports 20-30+
+                    keys.</p>
 
-                <!-- Add Key Form -->
                 <div class="add-key-form">
                     <input type="text" id="new-key-input" placeholder="Enter ScrapingDog API key" class="input-field">
-                    <button class="btn-primary" id="add-key-btn">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                        Add Key
-                    </button>
+                    <button class="btn-primary" id="add-key-btn">+ Add</button>
                 </div>
 
-                <!-- Keys List -->
                 <div class="keys-list" id="keys-list">
                     <div class="empty-state">No API keys added yet</div>
                 </div>
@@ -60,141 +52,89 @@
             <section class="card info-card">
                 <h3>How it works</h3>
                 <ul class="info-list">
-                    <li>
-                        <span class="info-icon">1</span>
-                        <span>Add one or more ScrapingDog API keys</span>
-                    </li>
-                    <li>
-                        <span class="info-icon">2</span>
-                        <span>The system uses the first available key</span>
-                    </li>
-                    <li>
-                        <span class="info-icon">3</span>
-                        <span>When a key hits its limit, it auto-rotates to the next key</span>
-                    </li>
-                    <li>
-                        <span class="info-icon">4</span>
-                        <span>Keys are saved and persist across sessions</span>
-                    </li>
+                    <li><span class="info-icon">1</span><span>Add one or more ScrapingDog API keys</span></li>
+                    <li><span class="info-icon">2</span><span>System uses the first available key</span></li>
+                    <li><span class="info-icon">3</span><span>When limit reached, auto-rotates to next key</span></li>
+                    <li><span class="info-icon">4</span><span>Keys are saved and persist across sessions</span></li>
                 </ul>
             </section>
         </main>
 
-        <!-- Footer -->
         <footer class="footer">
             <p>Domain Index Checker</p>
         </footer>
     </div>
 
-    <!-- Toast Notification -->
-    <div class="toast" id="toast">
-        <span class="toast-message"></span>
-    </div>
+    <div class="toast" id="toast"><span class="toast-message"></span></div>
 
     <script>
+        // Apply saved theme
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+
         document.addEventListener('DOMContentLoaded', () => {
-            const newKeyInput = document.getElementById('new-key-input');
-            const addKeyBtn = document.getElementById('add-key-btn');
-            const keysList = document.getElementById('keys-list');
-            const keyCount = document.getElementById('key-count');
+            const input = document.getElementById('new-key-input');
+            const addBtn = document.getElementById('add-key-btn');
+            const list = document.getElementById('keys-list');
+            const count = document.getElementById('key-count');
             const toast = document.getElementById('toast');
 
-            // Load keys on page load
             loadKeys();
 
-            // Add key button
-            addKeyBtn.addEventListener('click', addKey);
-            newKeyInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') addKey();
-            });
+            addBtn.addEventListener('click', addKey);
+            input.addEventListener('keypress', e => e.key === 'Enter' && addKey());
 
             async function loadKeys() {
-                try {
-                    const response = await fetch('/api/keys');
-                    const data = await response.json();
-                    renderKeys(data.keys);
-                } catch (error) {
-                    showToast('Failed to load API keys', 'error');
-                }
+                const data = await (await fetch('/api/keys')).json();
+                render(data.keys);
             }
 
-            function renderKeys(keys) {
-                keyCount.textContent = `${keys.length} key${keys.length !== 1 ? 's' : ''}`;
-
-                if (keys.length === 0) {
-                    keysList.innerHTML = '<div class="empty-state">No API keys added yet</div>';
+            function render(keys) {
+                count.textContent = `${keys.length} key${keys.length !== 1 ? 's' : ''}`;
+                if (!keys.length) {
+                    list.innerHTML = '<div class="empty-state">No API keys added yet</div>';
                     return;
                 }
-
-                keysList.innerHTML = keys.map((item, index) => `
+                list.innerHTML = keys.map((k, i) => `
                     <div class="key-item">
-                        <span class="key-number">${index + 1}</span>
-                        <span class="key-value">${item.masked}</span>
-                        <button class="btn-delete" data-key="${item.key}" title="Delete key">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
+                        <span class="key-number">${i + 1}</span>
+                        <span class="key-value">${k.masked}</span>
+                        <button class="btn-delete" data-key="${k.key}">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                         </button>
                     </div>
                 `).join('');
-
-                // Attach delete handlers
-                document.querySelectorAll('.btn-delete').forEach(btn => {
-                    btn.onclick = () => deleteKey(btn.dataset.key);
-                });
+                list.querySelectorAll('.btn-delete').forEach(b => b.onclick = () => deleteKey(b.dataset.key));
             }
 
             async function addKey() {
-                const key = newKeyInput.value.trim();
-                if (!key) {
-                    showToast('Please enter an API key', 'error');
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/keys', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ key })
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        newKeyInput.value = '';
-                        showToast('API key added successfully', 'success');
-                        loadKeys();
-                    } else {
-                        showToast(data.error || 'Failed to add key', 'error');
-                    }
-                } catch (error) {
-                    showToast('Failed to add API key', 'error');
+                const key = input.value.trim();
+                if (!key) return show('Enter a key', 'error');
+                const res = await fetch('/api/keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    input.value = '';
+                    show('Key added!', 'success');
+                    loadKeys();
+                } else {
+                    show(data.error, 'error');
                 }
             }
 
             async function deleteKey(key) {
-                if (!confirm('Are you sure you want to delete this API key?')) return;
-
-                try {
-                    const response = await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (response.ok) {
-                        showToast('API key deleted', 'success');
-                        loadKeys();
-                    } else {
-                        showToast('Failed to delete key', 'error');
-                    }
-                } catch (error) {
-                    showToast('Failed to delete API key', 'error');
-                }
+                if (!confirm('Delete this key?')) return;
+                await fetch(`/api/keys/${encodeURIComponent(key)}`, { method: 'DELETE' });
+                show('Key deleted', 'success');
+                loadKeys();
             }
 
-            function showToast(message, type = 'info') {
-                toast.querySelector('.toast-message').textContent = message;
-                toast.className = 'toast show';
-                if (type === 'success') toast.classList.add('success');
+            function show(msg, type) {
+                toast.querySelector('.toast-message').textContent = msg;
+                toast.className = 'toast show' + (type === 'success' ? ' success' : '');
                 setTimeout(() => toast.classList.remove('show'), 3000);
             }
         });
