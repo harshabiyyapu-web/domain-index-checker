@@ -62,6 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndexedDomains = [];
     let bulkWaybackIndex = 0;
 
+    let renderedIndexedCount = 0;
+    let renderedNotIndexedCount = 0;
+    let renderedErrorsCount = 0;
+
     // Favorites
     const FAVORITES_KEY = 'domain_checker_favorites';
 
@@ -196,38 +200,52 @@ document.addEventListener('DOMContentLoaded', () => {
         currentIndexedDomains = indexed;
 
         // Indexed list
-        if (indexed.length > 0) {
-            indexedList.innerHTML = indexed.map((item, i) => createDomainItem(item.domain, item.count, i + 1, false)).join('');
-            attachActions(indexedList, false);
+        if (indexed.length > renderedIndexedCount) {
+            if (renderedIndexedCount === 0) indexedList.innerHTML = '';
+            const newItems = indexed.slice(renderedIndexedCount);
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newItems.map((item, i) => createDomainItem(item.domain, item.count, renderedIndexedCount + i + 1, false)).join('');
+            attachActions(tempDiv, false);
+
+            while (tempDiv.firstChild) {
+                indexedList.appendChild(tempDiv.firstChild);
+            }
+
+            renderedIndexedCount = indexed.length;
             bulkActions.style.display = 'block';
             updateBulkInfo();
-        } else {
-            indexedList.innerHTML = '<div class="empty-state">No indexed domains yet</div>';
         }
 
         // Not indexed list
-        if (not_indexed.length > 0) {
-            notIndexedList.innerHTML = not_indexed.map((d, i) => `
+        if (not_indexed.length > renderedNotIndexedCount) {
+            if (renderedNotIndexedCount === 0) notIndexedList.innerHTML = '';
+            const newItems = not_indexed.slice(renderedNotIndexedCount);
+            const html = newItems.map((d, i) => `
                 <div class="domain-item">
-                    <span class="domain-number">${i + 1}</span>
+                    <span class="domain-number">${renderedNotIndexedCount + i + 1}</span>
                     <div class="domain-info"><span class="domain-name">${esc(d)}</span></div>
                 </div>
             `).join('');
-        } else {
-            notIndexedList.innerHTML = '<div class="empty-state">No unindexed domains yet</div>';
+            notIndexedList.insertAdjacentHTML('beforeend', html);
+            renderedNotIndexedCount = not_indexed.length;
         }
 
         // Errors
-        if (errors.length > 0) {
-            errorsCard.style.display = 'block';
-            errorsList.innerHTML = errors.map(e => `
+        if (errors.length > renderedErrorsCount) {
+            if (renderedErrorsCount === 0) {
+                errorsCard.style.display = 'block';
+                errorsList.innerHTML = '';
+            }
+            const newItems = errors.slice(renderedErrorsCount);
+            const html = newItems.map(e => `
                 <div class="domain-item">
                     <span class="domain-name">${esc(e.domain)}</span>
                     <span class="error-message">${esc(e.error)}</span>
                 </div>
             `).join('');
-        } else {
-            errorsCard.style.display = 'none';
+            errorsList.insertAdjacentHTML('beforeend', html);
+            renderedErrorsCount = errors.length;
         }
     }
 
@@ -299,6 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
         notIndexedList.innerHTML = '<div class="empty-state">No unindexed domains yet</div>';
         errorsCard.style.display = 'none';
         bulkActions.style.display = 'none';
+
+        renderedIndexedCount = 0;
+        renderedNotIndexedCount = 0;
+        renderedErrorsCount = 0;
     }
 
     // Bulk Wayback
