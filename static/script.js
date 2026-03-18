@@ -66,52 +66,59 @@ document.addEventListener('DOMContentLoaded', () => {
     let renderedNotIndexedCount = 0;
     let renderedErrorsCount = 0;
 
-    // Favorites
-    const FAVORITES_KEY = 'domain_checker_favorites';
+    let savedDomainsCache = [];
 
-    function getFavorites() {
+    async function fetchSavedDomains() {
         try {
-            return JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
-        } catch { return []; }
-    }
-
-    function saveFavorites(favorites) {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-        updateFavoritesUI();
-    }
-
-    function addToFavorites(domain, count = 0) {
-        const favorites = getFavorites();
-        if (!favorites.some(f => f.domain === domain)) {
-            favorites.push({ domain, count });
-            saveFavorites(favorites);
-            showToast(`Added to favorites`, 'success');
+            const res = await (await fetch('/api/saved_domains')).json();
+            savedDomainsCache = res.saved || [];
+            updateFavoritesUI();
+        } catch (e) {
+            console.error('Failed to load saved domains', e);
         }
     }
 
-    function removeFromFavorites(domain) {
-        saveFavorites(getFavorites().filter(f => f.domain !== domain));
-        showToast(`Removed from favorites`, 'success');
+    async function addToFavorites(domain, count = 0) {
+        if (!isFavorite(domain)) {
+            savedDomainsCache.push({ domain, count });
+            updateFavoritesUI();
+            try {
+                await fetch('/api/saved_domains/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domains: [{ domain, count }] })
+                });
+                showToast(`Saved ${domain}`, 'success');
+            } catch { showToast('Failed to save', 'error'); }
+        }
+    }
+
+    async function removeFromFavorites(domain) {
+        savedDomainsCache = savedDomainsCache.filter(f => f.domain !== domain);
+        updateFavoritesUI();
+        try {
+            await fetch(`/api/saved_domains/${encodeURIComponent(domain)}`, { method: 'DELETE' });
+            showToast(`Removed ${domain}`, 'success');
+        } catch { showToast('Failed to remove', 'error'); }
     }
 
     function isFavorite(domain) {
-        return getFavorites().some(f => f.domain === domain);
+        return savedDomainsCache.some(f => f.domain === domain);
     }
 
     function updateFavoritesUI() {
-        const favorites = getFavorites();
+        const favorites = savedDomainsCache;
         favoritesCount.textContent = favorites.length;
 
         if (favorites.length > 0) {
-            favoritesSection.style.display = 'block';
             favoritesList.innerHTML = favorites.map((item, i) => createDomainItem(item.domain, item.count, i + 1, true)).join('');
             attachActions(favoritesList, true);
         } else {
-            favoritesSection.style.display = 'none';
+            favoritesList.innerHTML = '<div class="empty-state">No saved domains yet</div>';
         }
     }
 
-    updateFavoritesUI();
+    fetchSavedDomains();
 
     // Domain count
     domainsInput?.addEventListener('input', () => {
@@ -124,8 +131,15 @@ document.addEventListener('DOMContentLoaded', () => {
         domainCount.textContent = '0 domains';
     });
 
-    clearFavoritesBtn?.addEventListener('click', () => {
-        if (confirm('Clear all favorites?')) saveFavorites([]);
+    clearFavoritesBtn?.addEventListener('click', async () => {
+        if (confirm('Clear all saved domains?')) {
+            for (const item of savedDomainsCache) {
+                await fetch(`/api/saved_domains/${encodeURIComponent(item.domain)}`, { method: 'DELETE' });
+            }
+            savedDomainsCache = [];
+            updateFavoritesUI();
+            showToast('Cleared all saved list', 'success');
+        }
     });
 
     // Check button
@@ -339,18 +353,58 @@ document.addEventListener('DOMContentLoaded', () => {
         bulkInfo.textContent = `Next: ${start}-${end} of ${total}`;
     }
 
+    const saveAllIndexedBtn = document.getElementById('save-all-indexed-btn');
+
+    saveAllIndexedBtn?.addEventListener('click', async () => {
+        if (currentIndexedDomains.length === 0) return showToast('No domains to save', 'error');
+        saveAllIndexedBtn.disabled = true;
+        saveAllIndexedBtn.textContent = 'Saving...';
+        try {
+            await fetch('/api/saved_domains/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domains: currentIndexedDomains })
+            });
+            showToast('Saved all indexed domains!', 'success');
+            await fetchSavedDomains();
+        } catch {
+            showToast('Failed to save domains', 'error');
+        } finally {
+            saveAllIndexedBtn.disabled = false;
+            saveAllIndexedBtn.textContent = 'Save All';
+        }
+    });
+
     // Copy functions
     copyIndexedBtn?.addEventListener('click', () => copyList(currentIndexedDomains.map(d => d.domain)));
     copyNotIndexedBtn?.addEventListener('click', async () => {
         const data = await (await fetch('/progress')).json();
         copyList(data.not_indexed);
     });
-    copyFavoritesBtn?.addEventListener('click', () => copyList(getFavorites().map(f => f.domain)));
+    copyFavoritesBtn?.addEventListener('click', () => copyList(savedDomainsCache.map(f => f.domain)));
 
-    function copyList(domains) {
+    async function copyList(domains) {
         if (!domains.length) return showToast('Nothing to copy', 'error');
-        navigator.clipboard.writeText(domains.join('\n'));
-        showToast(`${domains.length} copied!`, 'success');
+        const text = domains.join('\n');
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                textArea.remove();
+            }
+            showToast(`${domains.length} copied!`, 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to copy', 'error');
+        }
     }
 
     // Utilities

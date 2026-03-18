@@ -8,10 +8,27 @@ import requests
 import time
 import json
 import os
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
 app = Flask(__name__)
+
+DB_FILE = 'domains.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS saved_domains (
+            domain TEXT PRIMARY KEY,
+            count INTEGER
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # API Keys storage file
 API_KEYS_FILE = 'api_keys.json'
@@ -267,6 +284,53 @@ def delete_key(key):
         save_api_keys(keys)
         return jsonify({'message': 'API key deleted successfully'})
     return jsonify({'error': 'API key not found'}), 404
+
+@app.route('/api/saved_domains', methods=['GET'])
+def get_saved_domains():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT domain, count FROM saved_domains ORDER BY domain ASC')
+    rows = c.fetchall()
+    conn.close()
+    return jsonify({'saved': [{'domain': r[0], 'count': r[1]} for r in rows]})
+
+@app.route('/api/saved_domains/bulk', methods=['POST'])
+def save_domains_bulk():
+    domains_data = request.json.get('domains', [])
+    if not domains_data:
+        return jsonify({'error': 'No domains provided'}), 400
+        
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    added = 0
+    for item in domains_data:
+        domain = item.get('domain')
+        count = item.get('count', 0)
+        if domain:
+            try:
+                c.execute('INSERT OR IGNORE INTO saved_domains (domain, count) VALUES (?, ?)', (domain, count))
+                if c.rowcount > 0:
+                    added += 1
+            except sqlite3.Error:
+                pass
+                
+    conn.commit()
+    conn.close()
+    return jsonify({'message': f'Successfully saved {added} domains', 'added': added})
+
+@app.route('/api/saved_domains/<path:domain>', methods=['DELETE'])
+def delete_saved_domain(domain):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('DELETE FROM saved_domains WHERE domain = ?', (domain,))
+    deleted = c.rowcount
+    conn.commit()
+    conn.close()
+    
+    if deleted > 0:
+        return jsonify({'message': 'Domain deleted'})
+    return jsonify({'error': 'Domain not found'}), 404
 
 @app.route('/check', methods=['POST'])
 def check_domains():

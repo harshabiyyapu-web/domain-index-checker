@@ -124,12 +124,12 @@
                 </div>
             </section>
 
-            <!-- Favorites Section -->
-            <section class="card" id="favorites-section" style="display: none;">
+            <!-- Saved Section -->
+            <section class="card" id="favorites-section">
                 <div class="section-header">
                     <div class="header-left">
-                        <span class="status-icon favorite">★</span>
-                        <h2>Favorites</h2>
+                        <span class="status-icon favorite">💾</span>
+                        <h2>Saved List</h2>
                     </div>
                     <div class="header-actions">
                         <span class="count-badge" id="favorites-count">0</span>
@@ -145,7 +145,7 @@
                     </div>
                 </div>
                 <div class="domain-list" id="favorites-list">
-                    <div class="empty-state">No favorites yet</div>
+                    <div class="empty-state">No saved domains yet</div>
                 </div>
             </section>
 
@@ -158,6 +158,7 @@
                     </div>
                     <div class="header-actions">
                         <span class="count-badge indexed" id="indexed-count">0</span>
+                        <button class="btn-text" id="save-all-indexed-btn" style="margin-right:8px;">Save All</button>
                         <button class="btn-icon" id="copy-indexed-btn" title="Copy list">
                             <svg viewBox="0 0 24 24" fill="none">
                                 <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
