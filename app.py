@@ -154,9 +154,9 @@ def check_domain_index(domain):
     except Exception as e:
         return (domain, None, 0, str(e))
 
-def process_domains(domains, max_workers=5):
+def process_domains(domains, batch_delay=10):
     """
-    Process multiple domains concurrently
+    Process multiple domains concurrently in batches of 5
     """
     global current_progress
     
@@ -170,39 +170,47 @@ def process_domains(domains, max_workers=5):
         current_progress['in_progress'] = True
     
     results = []
+    chunk_size = 5
     
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all tasks
-        future_to_domain = {executor.submit(check_domain_index, domain): domain for domain in domains}
+    for i in range(0, len(domains), chunk_size):
+        chunk = domains[i:i + chunk_size]
+        start_time = time.time()
         
-        for future in as_completed(future_to_domain):
-            result = future.result()
+        with ThreadPoolExecutor(max_workers=chunk_size) as executor:
+            future_to_domain = {executor.submit(check_domain_index, domain): domain for domain in chunk}
             
-            if result is None:
-                continue
+            for future in as_completed(future_to_domain):
+                result = future.result()
                 
-            domain, is_indexed, count, error = result
-            
-            with progress_lock:
-                current_progress['completed'] += 1
+                if result is None:
+                    continue
+                    
+                domain, is_indexed, count, error = result
                 
-                if error:
-                    current_progress['errors'].append({
-                        'domain': domain,
-                        'error': error
-                    })
-                elif is_indexed:
-                    current_progress['indexed'].append({
-                        'domain': domain,
-                        'count': count
-                    })
-                else:
-                    current_progress['not_indexed'].append(domain)
-            
-            results.append(result)
-            
-            # Small delay to avoid rate limiting
-            time.sleep(0.2)
+                with progress_lock:
+                    current_progress['completed'] += 1
+                    
+                    if error:
+                        current_progress['errors'].append({
+                            'domain': domain,
+                            'error': error
+                        })
+                    elif is_indexed:
+                        current_progress['indexed'].append({
+                            'domain': domain,
+                            'count': count
+                        })
+                    else:
+                        current_progress['not_indexed'].append(domain)
+                
+                results.append(result)
+        
+        # Determine how long to wait before processing the next chunk
+        if i + chunk_size < len(domains):
+            elapsed = time.time() - start_time
+            sleep_time = max(0, batch_delay - elapsed)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
     
     with progress_lock:
         current_progress['in_progress'] = False
@@ -270,7 +278,7 @@ def check_domains():
     
     data = request.json
     domains_text = data.get('domains', '')
-    max_workers = data.get('max_workers', 5)
+    batch_delay = data.get('delay', 10)
     
     # Parse domains from text
     domains = [d.strip() for d in domains_text.strip().split('\n') if d.strip()]
@@ -279,7 +287,7 @@ def check_domains():
         return jsonify({'error': 'No domains provided'}), 400
     
     # Start processing in background thread
-    thread = threading.Thread(target=process_domains, args=(domains, max_workers))
+    thread = threading.Thread(target=process_domains, args=(domains, batch_delay))
     thread.start()
     
     return jsonify({
