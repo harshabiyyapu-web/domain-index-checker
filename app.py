@@ -40,8 +40,8 @@ def get_current_api_key():
     # Use the first key by default, rotation happens on failures
     return keys[0] if keys else None
 
-# ScrapingDog API Configuration
-API_URL = "https://api.scrapingdog.com/google"
+# Serper.dev API Configuration
+API_URL = "https://google.serper.dev/search"
 
 # Thread-safe progress tracking
 progress_lock = threading.Lock()
@@ -103,22 +103,22 @@ def check_domain_index(domain):
     if not api_key:
         return (domain, None, 0, "No working API key available")
     
-    params = {
-        "api_key": api_key,
-        "query": f"site:{domain}",
-        "country": "us",
-        "results": "10",
-        "page": "0"
+    headers = {
+        'X-API-KEY': api_key,
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        "q": f"site:{domain}"
     }
     
     try:
-        response = requests.get(API_URL, params=params, timeout=30)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
         
         if response.status_code == 200:
             data = response.json()
             
             # Check for organic results
-            organic_results = data.get('organic_results', [])
+            organic_results = data.get('organic', [])
             result_count = len(organic_results)
             
             if result_count > 0:
@@ -131,17 +131,19 @@ def check_domain_index(domain):
             # Try again with next key
             new_key = get_working_api_key()
             if new_key:
-                params["api_key"] = new_key
-                response = requests.get(API_URL, params=params, timeout=30)
+                headers['X-API-KEY'] = new_key
+                response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
                 if response.status_code == 200:
                     data = response.json()
-                    organic_results = data.get('organic_results', [])
+                    organic_results = data.get('organic', [])
                     result_count = len(organic_results)
                     if result_count > 0:
                         return (domain, True, result_count, None)
                     else:
                         return (domain, False, 0, None)
             return (domain, None, 0, f"API limit reached on all keys")
+        elif response.status_code == 429:
+             return (domain, None, 0, f"API Rate Limit (429 Too Many Requests)")
         else:
             return (domain, None, 0, f"API Error: {response.status_code}")
             
@@ -268,7 +270,7 @@ def check_domains():
     
     data = request.json
     domains_text = data.get('domains', '')
-    max_workers = data.get('max_workers', 3)
+    max_workers = data.get('max_workers', 5)
     
     # Parse domains from text
     domains = [d.strip() for d in domains_text.strip().split('\n') if d.strip()]

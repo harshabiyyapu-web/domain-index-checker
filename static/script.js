@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const domainCount = document.getElementById('domain-count');
     const clearBtn = document.getElementById('clear-btn');
     const checkBtn = document.getElementById('check-btn');
-    const workersSelect = document.getElementById('workers');
+
 
     const progressSection = document.getElementById('progress-section');
     const progressBar = document.getElementById('progress-bar');
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/check', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domains: text, max_workers: parseInt(workersSelect.value) })
+                body: JSON.stringify({ domains: text, max_workers: 5 })
             });
 
             if (!res.ok) {
