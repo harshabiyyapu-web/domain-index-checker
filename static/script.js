@@ -1,6 +1,6 @@
 /**
- * Domain Index Checker v2 - Enhanced JavaScript
- * Features: Theme toggle, Bulk open, Colored buttons, Favorites
+ * Domain Index Checker v3 - Session-based, no caching
+ * Features: Theme toggle, Bulk open, Colored buttons, Favorites, Session-based results
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearBtn = document.getElementById('clear-btn');
     const checkBtn = document.getElementById('check-btn');
     const delaySelect = document.getElementById('delay');
-
 
     const progressSection = document.getElementById('progress-section');
     const progressBar = document.getElementById('progress-bar');
@@ -62,9 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndexedDomains = [];
     let bulkWaybackIndex = 0;
 
+    // Incremental rendering counters — reset per search
     let renderedIndexedCount = 0;
     let renderedNotIndexedCount = 0;
     let renderedErrorsCount = 0;
+
+    // Current active session ID — ensures we only display results from the active search
+    let currentSessionId = null;
+
+    // Not-indexed cache (so we don't need to re-fetch from server for copy)
+    let currentNotIndexedDomains = [];
 
     let savedDomainsCache = [];
 
@@ -149,10 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = domainsInput.value.trim();
         if (!text) return showToast('Enter domains first', 'error');
 
+        // Stop any existing polling from a previous search
+        stopPolling();
+
         checkBtn.disabled = true;
         checkBtn.textContent = 'Processing...';
         bulkWaybackIndex = 0;
 
+        // Fully clear all previous results from the UI
         resetResults();
         progressSection.style.display = 'block';
         indexedSection.style.display = 'block';
@@ -170,6 +180,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Failed');
             }
 
+            const responseData = await res.json();
+
+            // Store the session_id — only poll for THIS session
+            currentSessionId = responseData.session_id;
+
             startPolling();
         } catch (e) {
             showToast(e.message, 'error');
@@ -178,10 +193,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startPolling() {
+        // Capture the session id at poll-start time
+        const sessionId = currentSessionId;
+
         pollingInterval = setInterval(async () => {
+            // If the session has changed (new search started), stop this poller
+            if (sessionId !== currentSessionId) {
+                clearInterval(pollingInterval);
+                return;
+            }
+
             try {
-                const data = await (await fetch('/progress')).json();
+                const data = await (await fetch(`/progress?session_id=${encodeURIComponent(sessionId)}`)).json();
+
+                // Double-check session hasn't changed while we were fetching
+                if (sessionId !== currentSessionId) return;
+
                 updateProgress(data);
+
                 if (!data.in_progress && data.completed > 0) {
                     stopPolling();
                     finishProcessing();
@@ -191,8 +220,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopPolling() {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
     }
 
     function updateProgress(data) {
@@ -212,8 +243,9 @@ document.addEventListener('DOMContentLoaded', () => {
         errorsCount.textContent = errors.length;
 
         currentIndexedDomains = indexed;
+        currentNotIndexedDomains = not_indexed;
 
-        // Indexed list
+        // Indexed list — append only new items
         if (indexed.length > renderedIndexedCount) {
             if (renderedIndexedCount === 0) indexedList.innerHTML = '';
             const newItems = indexed.slice(renderedIndexedCount);
@@ -231,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateBulkInfo();
         }
 
-        // Not indexed list
+        // Not indexed list — append only new items
         if (not_indexed.length > renderedNotIndexedCount) {
             if (renderedNotIndexedCount === 0) notIndexedList.innerHTML = '';
             const newItems = not_indexed.slice(renderedNotIndexedCount);
@@ -245,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderedNotIndexedCount = not_indexed.length;
         }
 
-        // Errors
+        // Errors — append only new items
         if (errors.length > renderedErrorsCount) {
             if (renderedErrorsCount === 0) {
                 errorsCard.style.display = 'block';
@@ -321,6 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetResults() {
+        // Invalidate the current session so old pollers stop
+        currentSessionId = null;
+
+        // Reset all in-memory state
+        currentIndexedDomains = [];
+        currentNotIndexedDomains = [];
+        renderedIndexedCount = 0;
+        renderedNotIndexedCount = 0;
+        renderedErrorsCount = 0;
+
+        // Reset UI
         progressBar.style.width = '0%';
         progressBadge.textContent = '0%';
         progressBadge.classList.add('processing');
@@ -329,12 +372,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         indexedList.innerHTML = '<div class="empty-state">No indexed domains yet</div>';
         notIndexedList.innerHTML = '<div class="empty-state">No unindexed domains yet</div>';
+        errorsList.innerHTML = '';
         errorsCard.style.display = 'none';
         bulkActions.style.display = 'none';
 
-        renderedIndexedCount = 0;
-        renderedNotIndexedCount = 0;
-        renderedErrorsCount = 0;
+        // Hide result sections until new data comes in
+        indexedSection.style.display = 'none';
+        notIndexedSection.style.display = 'none';
     }
 
     // Bulk Wayback
@@ -375,12 +419,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Copy functions
+    // Copy functions — use local cached data, no extra API calls
     copyIndexedBtn?.addEventListener('click', () => copyList(currentIndexedDomains.map(d => d.domain)));
-    copyNotIndexedBtn?.addEventListener('click', async () => {
-        const data = await (await fetch('/progress')).json();
-        copyList(data.not_indexed);
-    });
+    copyNotIndexedBtn?.addEventListener('click', () => copyList(currentNotIndexedDomains));
     copyFavoritesBtn?.addEventListener('click', () => copyList(savedDomainsCache.map(f => f.domain)));
 
     async function copyList(domains) {
