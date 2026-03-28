@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domain Index Checker</title>
+    <title>Article Index Checker</title>
+    <meta name="description" content="Check if your articles and URLs are indexed in Google, grouped by domain">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,51 +17,47 @@
         <!-- Header -->
         <header class="header">
             <div class="header-row">
-                <h1>Domain Index Checker</h1>
+                <h1>Article Index Checker</h1>
                 <div class="header-actions">
                     <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
                         <svg class="icon-sun" viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" />
-                            <path
-                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                         </svg>
                         <svg class="icon-moon" viewBox="0 0 24 24" fill="none">
-                            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </button>
                     <a href="/settings" class="btn-icon" title="Settings">
                         <svg viewBox="0 0 24 24" fill="none">
                             <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
-                            <path
-                                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+                            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
                                 stroke="currentColor" stroke-width="2" />
                         </svg>
                     </a>
                 </div>
             </div>
-            <p class="subtitle">Check Google indexation for your domains</p>
+            <p class="subtitle">Check Google indexation for your articles &amp; URLs — grouped by domain</p>
         </header>
 
         <!-- Main Content -->
         <main class="main-content">
             <!-- Input Section -->
-            <section class="card">
+            <section class="card" id="input-card">
                 <div class="section-header">
-                    <h2>Enter Domains</h2>
+                    <h2>Enter URLs</h2>
                     <span class="badge">One per line</span>
                 </div>
-
                 <div class="textarea-wrapper">
-                    <textarea id="domains-input"
-                        placeholder="example.com&#10;anotherdomain.com&#10;yourdomain.org"></textarea>
+                    <textarea id="urls-input" rows="10"
+                        placeholder="https://example.com/article-1&#10;https://example.com/post-2&#10;https://another.com/page-3&#10;https://another.com/page-4"></textarea>
                     <div class="textarea-footer">
-                        <span id="domain-count">0 domains</span>
+                        <span id="url-count">0 URLs</span>
                         <button class="btn-text" id="clear-btn">Clear</button>
                     </div>
                 </div>
-
                 <div class="action-bar">
                     <div class="settings">
                         <label for="delay">Batch Delay:</label>
@@ -70,9 +67,7 @@
                             <option value="30">30 Seconds</option>
                         </select>
                     </div>
-                    <button class="btn-primary" id="check-btn">
-                        Check Indexation
-                    </button>
+                    <button class="btn-primary" id="check-btn">Check Indexation</button>
                 </div>
             </section>
 
@@ -82,119 +77,35 @@
                     <h2>Progress</h2>
                     <span class="badge processing" id="progress-badge">0%</span>
                 </div>
-
                 <div class="progress-bar-container">
                     <div class="progress-bar" id="progress-bar"></div>
                 </div>
-
                 <div class="progress-stats">
-                    <div class="stat">
-                        <span class="stat-value" id="stat-completed">0</span>
-                        <span class="stat-label">Checked</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-value" id="stat-total">0</span>
-                        <span class="stat-label">Total</span>
-                    </div>
-                    <div class="stat indexed">
-                        <span class="stat-value" id="stat-indexed">0</span>
-                        <span class="stat-label">Indexed</span>
-                    </div>
-                    <div class="stat not-indexed">
-                        <span class="stat-value" id="stat-not-indexed">0</span>
-                        <span class="stat-label">Not Indexed</span>
-                    </div>
+                    <div class="stat"><span class="stat-value" id="stat-completed">0</span><span class="stat-label">Checked</span></div>
+                    <div class="stat"><span class="stat-value" id="stat-total">0</span><span class="stat-label">Total</span></div>
+                    <div class="stat indexed"><span class="stat-value" id="stat-indexed">0</span><span class="stat-label">Indexed</span></div>
+                    <div class="stat not-indexed"><span class="stat-value" id="stat-not-indexed">0</span><span class="stat-label">Not Indexed</span></div>
                 </div>
             </section>
 
-            <!-- Bulk Actions -->
-            <section class="card bulk-actions" id="bulk-actions" style="display: none;">
-                <div class="section-header">
-                    <h2>Bulk Actions</h2>
-                </div>
-                <div class="bulk-buttons">
-                    <button class="btn-bulk wayback" id="bulk-wayback-btn">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                        Open Wayback (Next 5)
-                    </button>
-                    <span class="bulk-info" id="bulk-info">Showing: 1-5</span>
-                </div>
-            </section>
-
-            <!-- Saved Section -->
-            <section class="card" id="favorites-section">
-                <div class="section-header">
-                    <div class="header-left">
-                        <span class="status-icon favorite">💾</span>
-                        <h2>Saved List</h2>
+            <!-- Results Section -->
+            <section class="card results-card" id="results-section" style="display: none;">
+                <!-- Sticky toolbar -->
+                <div class="results-toolbar" id="results-toolbar">
+                    <div class="toolbar-left">
+                        <h2>Results</h2>
                     </div>
-                    <div class="header-actions">
-                        <span class="count-badge" id="favorites-count">0</span>
-                        <button class="btn-icon" id="copy-favorites-btn" title="Copy list">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
-                                    stroke-width="2" />
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor"
-                                    stroke-width="2" />
-                            </svg>
-                        </button>
-                        <button class="btn-text" id="clear-favorites-btn">Clear</button>
-                    </div>
-                </div>
-                <div class="domain-list" id="favorites-list">
-                    <div class="empty-state">No saved domains yet</div>
-                </div>
-            </section>
-
-            <!-- Indexed Domains (Full Width) -->
-            <section class="card results-card" id="indexed-section" style="display: none;">
-                <div class="section-header">
-                    <div class="header-left">
-                        <span class="status-icon indexed">✓</span>
-                        <h2>Indexed Domains</h2>
-                    </div>
-                    <div class="header-actions">
-                        <span class="count-badge indexed" id="indexed-count">0</span>
-                        <button class="btn-text" id="save-all-indexed-btn" style="margin-right:8px;">Save All</button>
-                        <button class="btn-icon" id="copy-indexed-btn" title="Copy list">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
-                                    stroke-width="2" />
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor"
-                                    stroke-width="2" />
-                            </svg>
+                    <div class="toolbar-actions">
+                        <button class="toolbar-btn indexed" id="select-all-indexed-btn">✓ Select All Indexed</button>
+                        <button class="toolbar-btn not-indexed" id="select-all-not-indexed-btn">✗ Select All Not Indexed</button>
+                        <button class="toolbar-btn deselect" id="deselect-all-btn">Deselect All</button>
+                        <button class="toolbar-btn copy" id="copy-selected-btn">
+                            📋 Copy Selected (<span id="selected-count">0</span>)
                         </button>
                     </div>
                 </div>
-                <div class="domain-list" id="indexed-list">
-                    <div class="empty-state">No indexed domains yet</div>
-                </div>
-            </section>
-
-            <!-- Not Indexed Domains (Full Width) -->
-            <section class="card results-card" id="not-indexed-section" style="display: none;">
-                <div class="section-header">
-                    <div class="header-left">
-                        <span class="status-icon not-indexed">✗</span>
-                        <h2>Not Indexed Domains</h2>
-                    </div>
-                    <div class="header-actions">
-                        <span class="count-badge not-indexed" id="not-indexed-count">0</span>
-                        <button class="btn-icon" id="copy-not-indexed-btn" title="Copy list">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor"
-                                    stroke-width="2" />
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor"
-                                    stroke-width="2" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="domain-list" id="not-indexed-list">
-                    <div class="empty-state">No unindexed domains yet</div>
+                <div id="results-container">
+                    <!-- Populated by JS -->
                 </div>
             </section>
 
@@ -207,21 +118,16 @@
                     </div>
                     <span class="count-badge error" id="errors-count">0</span>
                 </div>
-                <div class="domain-list" id="errors-list"></div>
+                <div class="errors-list" id="errors-list"></div>
             </section>
         </main>
 
-        <!-- Footer -->
         <footer class="footer">
-            <p>Powered by Serper.dev API</p>
+            <p>Powered by <a href="https://serper.dev" target="_blank" rel="noopener">Serper.dev</a> API</p>
         </footer>
     </div>
 
-    <!-- Toast Notification -->
-    <div class="toast" id="toast">
-        <span class="toast-message"></span>
-    </div>
-
+    <div class="toast" id="toast"><span class="toast-message"></span></div>
     <script src="/static/script.js"></script>
 </body>
 

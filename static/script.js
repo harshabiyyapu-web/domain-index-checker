@@ -1,10 +1,10 @@
 /**
- * Domain Index Checker v3 - Session-based, no caching
- * Features: Theme toggle, Bulk open, Colored buttons, Favorites, Session-based results
+ * Article Index Checker - Checkbox-based selection with domain grouping
+ * Side-by-side indexed/not-indexed, per-domain checkboxes, global select buttons
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Theme Toggle
+    // ─── Theme ───
     const themeToggle = document.getElementById('theme-toggle');
     const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', next);
     });
 
-    // DOM Elements
-    const domainsInput = document.getElementById('domains-input');
-    const domainCount = document.getElementById('domain-count');
+    // ─── DOM ───
+    const urlsInput = document.getElementById('urls-input');
+    const urlCount = document.getElementById('url-count');
     const clearBtn = document.getElementById('clear-btn');
     const checkBtn = document.getElementById('check-btn');
     const delaySelect = document.getElementById('delay');
@@ -31,25 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const statIndexed = document.getElementById('stat-indexed');
     const statNotIndexed = document.getElementById('stat-not-indexed');
 
-    const bulkActions = document.getElementById('bulk-actions');
-    const bulkWaybackBtn = document.getElementById('bulk-wayback-btn');
-    const bulkInfo = document.getElementById('bulk-info');
-
-    const favoritesSection = document.getElementById('favorites-section');
-    const favoritesList = document.getElementById('favorites-list');
-    const favoritesCount = document.getElementById('favorites-count');
-    const copyFavoritesBtn = document.getElementById('copy-favorites-btn');
-    const clearFavoritesBtn = document.getElementById('clear-favorites-btn');
-
-    const indexedSection = document.getElementById('indexed-section');
-    const indexedList = document.getElementById('indexed-list');
-    const indexedCount = document.getElementById('indexed-count');
-    const copyIndexedBtn = document.getElementById('copy-indexed-btn');
-
-    const notIndexedSection = document.getElementById('not-indexed-section');
-    const notIndexedList = document.getElementById('not-indexed-list');
-    const notIndexedCount = document.getElementById('not-indexed-count');
-    const copyNotIndexedBtn = document.getElementById('copy-not-indexed-btn');
+    const resultsSection = document.getElementById('results-section');
+    const resultsContainer = document.getElementById('results-container');
+    const copySelectedBtn = document.getElementById('copy-selected-btn');
+    const selectedCountEl = document.getElementById('selected-count');
+    const selectAllIndexedBtn = document.getElementById('select-all-indexed-btn');
+    const selectAllNotIndexedBtn = document.getElementById('select-all-not-indexed-btn');
+    const deselectAllBtn = document.getElementById('deselect-all-btn');
 
     const errorsCard = document.getElementById('errors-card');
     const errorsList = document.getElementById('errors-list');
@@ -57,122 +45,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const toast = document.getElementById('toast');
 
+    // ─── State ───
     let pollingInterval = null;
-    let currentIndexedDomains = [];
-    let bulkWaybackIndex = 0;
-
-    // Incremental rendering counters — reset per search
-    let renderedIndexedCount = 0;
-    let renderedNotIndexedCount = 0;
-    let renderedErrorsCount = 0;
-
-    // Current active session ID — ensures we only display results from the active search
     let currentSessionId = null;
+    let domainOrder = [];
+    let lastRenderedHash = '';
 
-    // Not-indexed cache (so we don't need to re-fetch from server for copy)
-    let currentNotIndexedDomains = [];
-
-    let savedDomainsCache = [];
-
-    async function fetchSavedDomains() {
-        try {
-            const res = await (await fetch('/api/saved_domains')).json();
-            savedDomainsCache = res.saved || [];
-            updateFavoritesUI();
-        } catch (e) {
-            console.error('Failed to load saved domains', e);
-        }
-    }
-
-    async function addToFavorites(domain, count = 0) {
-        if (!isFavorite(domain)) {
-            savedDomainsCache.push({ domain, count });
-            updateFavoritesUI();
-            try {
-                await fetch('/api/saved_domains/bulk', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ domains: [{ domain, count }] })
-                });
-                showToast(`Saved ${domain}`, 'success');
-            } catch { showToast('Failed to save', 'error'); }
-        }
-    }
-
-    async function removeFromFavorites(domain) {
-        savedDomainsCache = savedDomainsCache.filter(f => f.domain !== domain);
-        updateFavoritesUI();
-        try {
-            await fetch(`/api/saved_domains/${encodeURIComponent(domain)}`, { method: 'DELETE' });
-            showToast(`Removed ${domain}`, 'success');
-        } catch { showToast('Failed to remove', 'error'); }
-    }
-
-    function isFavorite(domain) {
-        return savedDomainsCache.some(f => f.domain === domain);
-    }
-
-    function updateFavoritesUI() {
-        const favorites = savedDomainsCache;
-        favoritesCount.textContent = favorites.length;
-
-        if (favorites.length > 0) {
-            favoritesList.innerHTML = favorites.map((item, i) => createDomainItem(item.domain, item.count, i + 1, true)).join('');
-            attachActions(favoritesList, true);
-        } else {
-            favoritesList.innerHTML = '<div class="empty-state">No saved domains yet</div>';
-        }
-    }
-
-    fetchSavedDomains();
-
-    // Domain count
-    domainsInput?.addEventListener('input', () => {
-        const count = domainsInput.value.split('\n').filter(d => d.trim()).length;
-        domainCount.textContent = `${count} domain${count !== 1 ? 's' : ''}`;
+    // ─── URL count ───
+    urlsInput?.addEventListener('input', () => {
+        const count = urlsInput.value.split('\n').filter(d => d.trim()).length;
+        urlCount.textContent = `${count} URL${count !== 1 ? 's' : ''}`;
     });
 
     clearBtn?.addEventListener('click', () => {
-        domainsInput.value = '';
-        domainCount.textContent = '0 domains';
+        urlsInput.value = '';
+        urlCount.textContent = '0 URLs';
     });
 
-    clearFavoritesBtn?.addEventListener('click', async () => {
-        if (confirm('Clear all saved domains?')) {
-            for (const item of savedDomainsCache) {
-                await fetch(`/api/saved_domains/${encodeURIComponent(item.domain)}`, { method: 'DELETE' });
-            }
-            savedDomainsCache = [];
-            updateFavoritesUI();
-            showToast('Cleared all saved list', 'success');
-        }
-    });
-
-    // Check button
+    // ─── Check ───
     checkBtn?.addEventListener('click', startCheck);
 
     async function startCheck() {
-        const text = domainsInput.value.trim();
-        if (!text) return showToast('Enter domains first', 'error');
+        const text = urlsInput.value.trim();
+        if (!text) return showToast('Enter URLs first', 'error');
 
-        // Stop any existing polling from a previous search
         stopPolling();
-
         checkBtn.disabled = true;
         checkBtn.textContent = 'Processing...';
-        bulkWaybackIndex = 0;
-
-        // Fully clear all previous results from the UI
         resetResults();
         progressSection.style.display = 'block';
-        indexedSection.style.display = 'block';
-        notIndexedSection.style.display = 'block';
 
         try {
             const res = await fetch('/check', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domains: text, delay: parseInt(delaySelect.value) })
+                body: JSON.stringify({ urls: text, delay: parseInt(delaySelect.value) })
             });
 
             if (!res.ok) {
@@ -181,10 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const responseData = await res.json();
-
-            // Store the session_id — only poll for THIS session
             currentSessionId = responseData.session_id;
-
+            domainOrder = responseData.domain_order || [];
             startPolling();
         } catch (e) {
             showToast(e.message, 'error');
@@ -192,25 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ─── Polling ───
     function startPolling() {
-        // Capture the session id at poll-start time
         const sessionId = currentSessionId;
-
         pollingInterval = setInterval(async () => {
-            // If the session has changed (new search started), stop this poller
-            if (sessionId !== currentSessionId) {
-                clearInterval(pollingInterval);
-                return;
-            }
-
+            if (sessionId !== currentSessionId) { clearInterval(pollingInterval); return; }
             try {
                 const data = await (await fetch(`/progress?session_id=${encodeURIComponent(sessionId)}`)).json();
-
-                // Double-check session hasn't changed while we were fetching
                 if (sessionId !== currentSessionId) return;
-
                 updateProgress(data);
-
                 if (!data.in_progress && data.completed > 0) {
                     stopPolling();
                     finishProcessing();
@@ -220,14 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function stopPolling() {
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
-        }
+        if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
     }
 
+    // ─── Progress ───
     function updateProgress(data) {
-        const { total, completed, indexed, not_indexed, errors } = data;
+        const { total, completed, indexed, not_indexed, errors, domain_order } = data;
 
         statTotal.textContent = total;
         statCompleted.textContent = completed;
@@ -238,108 +131,256 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = `${pct}%`;
         progressBadge.textContent = `${pct}%`;
 
-        indexedCount.textContent = indexed.length;
-        notIndexedCount.textContent = not_indexed.length;
-        errorsCount.textContent = errors.length;
+        if (domain_order && domain_order.length > 0) domainOrder = domain_order;
 
-        currentIndexedDomains = indexed;
-        currentNotIndexedDomains = not_indexed;
-
-        // Indexed list — append only new items
-        if (indexed.length > renderedIndexedCount) {
-            if (renderedIndexedCount === 0) indexedList.innerHTML = '';
-            const newItems = indexed.slice(renderedIndexedCount);
-
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = newItems.map((item, i) => createDomainItem(item.domain, item.count, renderedIndexedCount + i + 1, false)).join('');
-            attachActions(tempDiv, false);
-
-            while (tempDiv.firstChild) {
-                indexedList.appendChild(tempDiv.firstChild);
-            }
-
-            renderedIndexedCount = indexed.length;
-            bulkActions.style.display = 'block';
-            updateBulkInfo();
+        const newHash = `${indexed.length}_${not_indexed.length}_${errors.length}`;
+        if (newHash !== lastRenderedHash) {
+            lastRenderedHash = newHash;
+            renderGroupedResults(indexed, not_indexed);
         }
 
-        // Not indexed list — append only new items
-        if (not_indexed.length > renderedNotIndexedCount) {
-            if (renderedNotIndexedCount === 0) notIndexedList.innerHTML = '';
-            const newItems = not_indexed.slice(renderedNotIndexedCount);
-            const html = newItems.map((d, i) => `
-                <div class="domain-item">
-                    <span class="domain-number">${renderedNotIndexedCount + i + 1}</span>
-                    <div class="domain-info"><span class="domain-name">${esc(d)}</span></div>
+        if (errors.length > 0) {
+            errorsCard.style.display = 'block';
+            errorsCount.textContent = errors.length;
+            errorsList.innerHTML = errors.map(e => `
+                <div class="error-row">
+                    <span class="error-url">${esc(e.url)}</span>
+                    <span class="error-msg">${esc(e.error)}</span>
                 </div>
             `).join('');
-            notIndexedList.insertAdjacentHTML('beforeend', html);
-            renderedNotIndexedCount = not_indexed.length;
-        }
-
-        // Errors — append only new items
-        if (errors.length > renderedErrorsCount) {
-            if (renderedErrorsCount === 0) {
-                errorsCard.style.display = 'block';
-                errorsList.innerHTML = '';
-            }
-            const newItems = errors.slice(renderedErrorsCount);
-            const html = newItems.map(e => `
-                <div class="domain-item">
-                    <span class="domain-name">${esc(e.domain)}</span>
-                    <span class="error-message">${esc(e.error)}</span>
-                </div>
-            `).join('');
-            errorsList.insertAdjacentHTML('beforeend', html);
-            renderedErrorsCount = errors.length;
         }
     }
 
-    function createDomainItem(domain, count, num, isFavSection) {
-        const fav = isFavorite(domain);
-        return `
-            <div class="domain-item" data-domain="${esc(domain)}" data-count="${count}">
-                <span class="domain-number">${num}</span>
-                <div class="domain-info">
-                    <span class="domain-name">${esc(domain)}</span>
-                    ${count > 0 ? `<span class="domain-count">${count}</span>` : ''}
-                </div>
-                <div class="domain-actions">
-                    <button class="action-btn google" title="Google site:">G</button>
-                    <button class="action-btn wayback" title="Wayback">W</button>
-                    <button class="action-btn ahrefs" title="Ahrefs">A</button>
-                    <button class="action-btn favorite ${fav ? 'active' : ''}" title="Favorite">★</button>
-                    <button class="action-btn open-all" title="Open All 3">ALL</button>
-                    ${isFavSection ? '<button class="action-btn remove" title="Remove">✕</button>' : ''}
-                </div>
-            </div>
-        `;
-    }
+    // ─── Render Grouped Results ───
+    function renderGroupedResults(indexed, not_indexed) {
+        if (indexed.length === 0 && not_indexed.length === 0) return;
+        resultsSection.style.display = 'block';
 
-    function attachActions(container, isFavSection) {
-        container.querySelectorAll('.domain-item').forEach(item => {
-            const domain = item.dataset.domain;
-            const count = parseInt(item.dataset.count) || 0;
+        // Save checked state
+        const checkedUrls = new Set();
+        resultsContainer.querySelectorAll('.url-checkbox:checked').forEach(cb => {
+            checkedUrls.add(cb.dataset.url);
+        });
 
-            item.querySelector('.google')?.addEventListener('click', () => openGoogle(domain));
-            item.querySelector('.wayback')?.addEventListener('click', () => openWayback(domain));
-            item.querySelector('.ahrefs')?.addEventListener('click', () => openAhrefs(domain));
-            item.querySelector('.open-all')?.addEventListener('click', () => openAll(domain));
+        // Group by domain
+        const groups = {};
+        for (const d of domainOrder) groups[d] = { indexed: [], not_indexed: [] };
+        for (const item of indexed) {
+            if (!groups[item.domain]) groups[item.domain] = { indexed: [], not_indexed: [] };
+            groups[item.domain].indexed.push(item);
+        }
+        for (const item of not_indexed) {
+            if (!groups[item.domain]) groups[item.domain] = { indexed: [], not_indexed: [] };
+            groups[item.domain].not_indexed.push(item);
+        }
 
-            item.querySelector('.favorite')?.addEventListener('click', (e) => {
-                if (isFavorite(domain)) {
-                    removeFromFavorites(domain);
-                    e.target.classList.remove('active');
-                } else {
-                    addToFavorites(domain, count);
-                    e.target.classList.add('active');
+        let html = '';
+
+        for (const domain of domainOrder) {
+            const g = groups[domain];
+            if (!g || (g.indexed.length === 0 && g.not_indexed.length === 0)) continue;
+
+            html += `<div class="domain-group" data-domain="${esc(domain)}">`;
+
+            // Domain header with checkboxes
+            html += `<div class="domain-header">`;
+            html += `<span class="dg-name">${esc(domain)}</span>`;
+            html += `<div class="dg-controls">`;
+            if (g.indexed.length > 0) {
+                html += `<label class="dg-check indexed" title="Select all indexed for ${esc(domain)}">`;
+                html += `<input type="checkbox" class="domain-indexed-check" data-domain="${esc(domain)}">`;
+                html += `<span class="dg-badge indexed">✓ ${g.indexed.length} indexed</span>`;
+                html += `</label>`;
+            }
+            if (g.not_indexed.length > 0) {
+                html += `<label class="dg-check not-indexed" title="Select all not indexed for ${esc(domain)}">`;
+                html += `<input type="checkbox" class="domain-not-indexed-check" data-domain="${esc(domain)}">`;
+                html += `<span class="dg-badge not-indexed">✗ ${g.not_indexed.length} not indexed</span>`;
+                html += `</label>`;
+            }
+            html += `</div>`;
+            html += `</div>`;
+
+            // Side-by-side columns
+            html += `<div class="domain-columns">`;
+
+            // Indexed column
+            html += `<div class="column indexed-col">`;
+            if (g.indexed.length > 0) {
+                html += `<div class="col-header indexed">✓ Indexed</div>`;
+                for (const item of g.indexed) {
+                    const checked = checkedUrls.has(item.url) ? ' checked' : '';
+                    html += `<div class="url-row">`;
+                    html += `<label class="url-label">`;
+                    html += `<input type="checkbox" class="url-checkbox" data-url="${esc(item.url)}" data-domain="${esc(domain)}" data-type="indexed"${checked}>`;
+                    html += `<span class="url-text">${esc(item.url)}</span>`;
+                    html += `</label>`;
+                    html += `<button class="row-btn-g" title="Search in Google" data-url="${esc(item.url)}">G</button>`;
+                    html += `</div>`;
                 }
-            });
+            } else {
+                html += `<div class="col-header indexed">✓ Indexed</div>`;
+                html += `<div class="col-empty">No indexed URLs</div>`;
+            }
+            html += `</div>`;
 
-            item.querySelector('.remove')?.addEventListener('click', () => removeFromFavorites(domain));
+            // Not Indexed column
+            html += `<div class="column not-indexed-col">`;
+            if (g.not_indexed.length > 0) {
+                html += `<div class="col-header not-indexed">✗ Not Indexed</div>`;
+                for (const item of g.not_indexed) {
+                    const checked = checkedUrls.has(item.url) ? ' checked' : '';
+                    html += `<div class="url-row">`;
+                    html += `<label class="url-label">`;
+                    html += `<input type="checkbox" class="url-checkbox" data-url="${esc(item.url)}" data-domain="${esc(domain)}" data-type="not-indexed"${checked}>`;
+                    html += `<span class="url-text">${esc(item.url)}</span>`;
+                    html += `</label>`;
+                    html += `<button class="row-btn-g" title="Search in Google" data-url="${esc(item.url)}">G</button>`;
+                    html += `</div>`;
+                }
+            } else {
+                html += `<div class="col-header not-indexed">✗ Not Indexed</div>`;
+                html += `<div class="col-empty">All URLs indexed</div>`;
+            }
+            html += `</div>`;
+
+            html += `</div>`; // domain-columns
+            html += `</div>`; // domain-group
+        }
+
+        resultsContainer.innerHTML = html;
+        attachEvents();
+        updateSelectedCount();
+    }
+
+    // ─── Event Listeners ───
+    function attachEvents() {
+        // Domain-level indexed checkboxes
+        resultsContainer.querySelectorAll('.domain-indexed-check').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const domain = cb.dataset.domain;
+                const checked = cb.checked;
+                resultsContainer.querySelectorAll(`.url-checkbox[data-domain="${domain}"][data-type="indexed"]`).forEach(c => {
+                    c.checked = checked;
+                });
+                updateSelectedCount();
+            });
+        });
+
+        // Domain-level not-indexed checkboxes
+        resultsContainer.querySelectorAll('.domain-not-indexed-check').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const domain = cb.dataset.domain;
+                const checked = cb.checked;
+                resultsContainer.querySelectorAll(`.url-checkbox[data-domain="${domain}"][data-type="not-indexed"]`).forEach(c => {
+                    c.checked = checked;
+                });
+                updateSelectedCount();
+            });
+        });
+
+        // Individual URL checkboxes
+        resultsContainer.querySelectorAll('.url-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateSelectedCount();
+                // Update domain-level checkbox state
+                syncDomainCheckbox(cb.dataset.domain, cb.dataset.type);
+            });
+        });
+
+        // Google buttons
+        resultsContainer.querySelectorAll('.row-btn-g').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = btn.dataset.url;
+                const clean = url.replace('https://', '').replace('http://', '');
+                window.open(`https://www.google.com/search?q=site:${encodeURIComponent(clean)}`, '_blank');
+            });
         });
     }
 
+    function syncDomainCheckbox(domain, type) {
+        const allCbs = resultsContainer.querySelectorAll(`.url-checkbox[data-domain="${domain}"][data-type="${type}"]`);
+        const allChecked = Array.from(allCbs).every(c => c.checked);
+        const selector = type === 'indexed' ? '.domain-indexed-check' : '.domain-not-indexed-check';
+        const domainCb = resultsContainer.querySelector(`${selector}[data-domain="${domain}"]`);
+        if (domainCb) domainCb.checked = allChecked;
+    }
+
+    // ─── Global Select Buttons ───
+    selectAllIndexedBtn?.addEventListener('click', () => {
+        resultsContainer.querySelectorAll('.url-checkbox[data-type="indexed"]').forEach(c => c.checked = true);
+        resultsContainer.querySelectorAll('.domain-indexed-check').forEach(c => c.checked = true);
+        updateSelectedCount();
+        showToast('All indexed URLs selected', 'success');
+    });
+
+    selectAllNotIndexedBtn?.addEventListener('click', () => {
+        resultsContainer.querySelectorAll('.url-checkbox[data-type="not-indexed"]').forEach(c => c.checked = true);
+        resultsContainer.querySelectorAll('.domain-not-indexed-check').forEach(c => c.checked = true);
+        updateSelectedCount();
+        showToast('All not-indexed URLs selected', 'success');
+    });
+
+    deselectAllBtn?.addEventListener('click', () => {
+        resultsContainer.querySelectorAll('.url-checkbox').forEach(c => c.checked = false);
+        resultsContainer.querySelectorAll('.domain-indexed-check, .domain-not-indexed-check').forEach(c => c.checked = false);
+        updateSelectedCount();
+    });
+
+    // ─── Copy ───
+    copySelectedBtn?.addEventListener('click', copySelectedUrls);
+
+    // Ctrl+C
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            const selected = resultsContainer.querySelectorAll('.url-checkbox:checked');
+            if (selected.length > 0 && document.activeElement !== urlsInput) {
+                e.preventDefault();
+                copySelectedUrls();
+            }
+        }
+    });
+
+    function copySelectedUrls() {
+        const checked = resultsContainer.querySelectorAll('.url-checkbox:checked');
+        if (checked.length === 0) return showToast('Select URLs first', 'error');
+
+        const urls = Array.from(checked).map(cb => {
+            let url = cb.dataset.url;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+            return url;
+        });
+
+        copyToClipboard(urls.join('\n')).then(() => {
+            showToast(`${urls.length} URL${urls.length > 1 ? 's' : ''} copied!`, 'success');
+        }).catch(() => {
+            showToast('Failed to copy', 'error');
+        });
+    }
+
+    function updateSelectedCount() {
+        const count = resultsContainer.querySelectorAll('.url-checkbox:checked').length;
+        selectedCountEl.textContent = count;
+    }
+
+    async function copyToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-999999px';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        }
+    }
+
+    // ─── Finish / Reset ───
     function finishProcessing() {
         progressBadge.textContent = 'Done';
         progressBadge.classList.remove('processing');
@@ -353,103 +394,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetResults() {
-        // Invalidate the current session so old pollers stop
         currentSessionId = null;
+        domainOrder = [];
+        lastRenderedHash = '';
 
-        // Reset all in-memory state
-        currentIndexedDomains = [];
-        currentNotIndexedDomains = [];
-        renderedIndexedCount = 0;
-        renderedNotIndexedCount = 0;
-        renderedErrorsCount = 0;
-
-        // Reset UI
         progressBar.style.width = '0%';
         progressBadge.textContent = '0%';
         progressBadge.classList.add('processing');
         ['stat-completed', 'stat-total', 'stat-indexed', 'stat-not-indexed'].forEach(id => {
             document.getElementById(id).textContent = '0';
         });
-        indexedList.innerHTML = '<div class="empty-state">No indexed domains yet</div>';
-        notIndexedList.innerHTML = '<div class="empty-state">No unindexed domains yet</div>';
-        errorsList.innerHTML = '';
+
+        resultsContainer.innerHTML = '';
+        resultsSection.style.display = 'none';
         errorsCard.style.display = 'none';
-        bulkActions.style.display = 'none';
-
-        // Hide result sections until new data comes in
-        indexedSection.style.display = 'none';
-        notIndexedSection.style.display = 'none';
+        errorsList.innerHTML = '';
+        selectedCountEl.textContent = '0';
     }
 
-    // Bulk Wayback
-    bulkWaybackBtn?.addEventListener('click', () => {
-        const batch = currentIndexedDomains.slice(bulkWaybackIndex, bulkWaybackIndex + 5);
-        batch.forEach(item => openWayback(item.domain));
-        bulkWaybackIndex += 5;
-        if (bulkWaybackIndex >= currentIndexedDomains.length) bulkWaybackIndex = 0;
-        updateBulkInfo();
-    });
-
-    function updateBulkInfo() {
-        const total = currentIndexedDomains.length;
-        const start = bulkWaybackIndex + 1;
-        const end = Math.min(bulkWaybackIndex + 5, total);
-        bulkInfo.textContent = `Next: ${start}-${end} of ${total}`;
+    // ─── Utilities ───
+    function esc(s) {
+        return s.replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
     }
-
-    const saveAllIndexedBtn = document.getElementById('save-all-indexed-btn');
-
-    saveAllIndexedBtn?.addEventListener('click', async () => {
-        if (currentIndexedDomains.length === 0) return showToast('No domains to save', 'error');
-        saveAllIndexedBtn.disabled = true;
-        saveAllIndexedBtn.textContent = 'Saving...';
-        try {
-            await fetch('/api/saved_domains/bulk', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domains: currentIndexedDomains })
-            });
-            showToast('Saved all indexed domains!', 'success');
-            await fetchSavedDomains();
-        } catch {
-            showToast('Failed to save domains', 'error');
-        } finally {
-            saveAllIndexedBtn.disabled = false;
-            saveAllIndexedBtn.textContent = 'Save All';
-        }
-    });
-
-    // Copy functions — use local cached data, no extra API calls
-    copyIndexedBtn?.addEventListener('click', () => copyList(currentIndexedDomains.map(d => d.domain)));
-    copyNotIndexedBtn?.addEventListener('click', () => copyList(currentNotIndexedDomains));
-    copyFavoritesBtn?.addEventListener('click', () => copyList(savedDomainsCache.map(f => f.domain)));
-
-    async function copyList(domains) {
-        if (!domains.length) return showToast('Nothing to copy', 'error');
-        const text = domains.join('\n');
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
-            } else {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-999999px";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                document.execCommand('copy');
-                textArea.remove();
-            }
-            showToast(`${domains.length} copied!`, 'success');
-        } catch (err) {
-            console.error(err);
-            showToast('Failed to copy', 'error');
-        }
-    }
-
-    // Utilities
-    function esc(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
     function showToast(msg, type) {
         toast.querySelector('.toast-message').textContent = msg;
@@ -457,9 +425,3 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 });
-
-// Global functions
-function openGoogle(d) { window.open(`https://www.google.com/search?q=site:${encodeURIComponent(d)}`, '_blank'); }
-function openWayback(d) { window.open(`https://web.archive.org/web/*/http://www.${d.replace(/^https?:\/\//, '')}`, '_blank'); }
-function openAhrefs(d) { window.open(`https://ahrefs.com/backlink-checker/?input=${encodeURIComponent(d)}&mode=subdomains`, '_blank'); }
-function openAll(d) { openGoogle(d); openWayback(d); openAhrefs(d); }

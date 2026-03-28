@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Domain Index Checker</title>
+    <title>Settings - Article Index Checker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
                 Back to Checker
             </a>
             <h1>Settings</h1>
-            <p class="subtitle">Manage your ScrapingDog API keys</p>
+            <p class="subtitle">Manage your Serper.dev API keys</p>
         </header>
 
         <!-- Main Content -->
@@ -35,11 +35,10 @@
                     <span class="count-badge" id="key-count">0 keys</span>
                 </div>
 
-                <p class="description">Add multiple keys for automatic rotation when limits are reached. Supports 20-30+
-                    keys.</p>
+                <p class="description">Add multiple Serper.dev API keys for automatic rotation when limits are reached.</p>
 
                 <div class="add-key-form">
-                    <input type="text" id="new-key-input" placeholder="Enter ScrapingDog API key" class="input-field">
+                    <input type="text" id="new-key-input" placeholder="Enter Serper.dev API key" class="input-field">
                     <button class="btn-primary" id="add-key-btn">+ Add</button>
                 </div>
 
@@ -48,20 +47,37 @@
                 </div>
             </section>
 
+            <!-- Get API Key Section -->
+            <section class="card info-card">
+                <h3>Get your API Key</h3>
+                <p class="description" style="margin-bottom: 1rem;">
+                    Sign up at Serper.dev to get your free API key. Each key includes free credits to get started.
+                </p>
+                <a href="https://serper.dev/signup" target="_blank" rel="noopener" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Create New API Key on Serper.dev
+                </a>
+            </section>
+
             <!-- Info Section -->
             <section class="card info-card">
                 <h3>How it works</h3>
                 <ul class="info-list">
-                    <li><span class="info-icon">1</span><span>Add one or more ScrapingDog API keys</span></li>
+                    <li><span class="info-icon">1</span><span>Add one or more Serper.dev API keys</span></li>
                     <li><span class="info-icon">2</span><span>System uses the first available key</span></li>
-                    <li><span class="info-icon">3</span><span>When limit reached, auto-rotates to next key</span></li>
-                    <li><span class="info-icon">4</span><span>Keys are saved and persist across sessions</span></li>
+                    <li><span class="info-icon">3</span><span>When a key hits rate limit or error, auto-rotates to next key</span></li>
+                    <li><span class="info-icon">4</span><span>All keys are tried before reporting failure</span></li>
+                    <li><span class="info-icon">5</span><span>Keys are saved and persist across sessions</span></li>
                 </ul>
             </section>
         </main>
 
         <footer class="footer">
-            <p>Domain Index Checker</p>
+            <p>Article Index Checker</p>
         </footer>
     </div>
 

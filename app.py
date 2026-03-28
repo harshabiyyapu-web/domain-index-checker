@@ -1,6 +1,6 @@
 """
-Domain Index Checker - Check if domains are indexed in Google using Serper.dev API
-With API Key Management and Rotation Support
+Article Index Checker - Check if article URLs are indexed in Google using Serper.dev API
+With API Key Management, Rotation Support, and Domain Grouping
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -8,34 +8,18 @@ import requests
 import time
 import json
 import os
-import sqlite3
 import uuid
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
 app = Flask(__name__)
 
-DB_FILE = 'domains.db'
-
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS saved_domains (
-            domain TEXT PRIMARY KEY,
-            count INTEGER
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
 # API Keys storage file
 API_KEYS_FILE = 'api_keys.json'
 
+
 def load_api_keys():
-    """Load API keys from file"""
     if os.path.exists(API_KEYS_FILE):
         try:
             with open(API_KEYS_FILE, 'r') as f:
@@ -45,30 +29,25 @@ def load_api_keys():
             pass
     return []
 
+
 def save_api_keys(keys):
-    """Save API keys to file"""
     with open(API_KEYS_FILE, 'w') as f:
         json.dump({'keys': keys}, f, indent=2)
 
-# Serper.dev API Configuration
+
+# Serper.dev API
 API_URL = "https://google.serper.dev/search"
 
-# ─── Session-based progress tracking ───
-# Each search gets a unique session_id so old results never leak into new searches.
+# Session-based tracking
 sessions_lock = threading.Lock()
-sessions = {}  # session_id -> progress dict
-
-# Track failed keys per session
-session_failed_keys = {}  # session_id -> set of failed keys
+sessions = {}
+session_failed_keys = {}
 key_lock = threading.Lock()
-
-# Track the currently active session
 active_session_id = None
 active_session_lock = threading.Lock()
 
 
 def create_session():
-    """Create a new search session and return its ID"""
     global active_session_id
     session_id = str(uuid.uuid4())
     with sessions_lock:
@@ -79,6 +58,7 @@ def create_session():
             'not_indexed': [],
             'errors': [],
             'in_progress': False,
+            'domain_order': [],
         }
     with key_lock:
         session_failed_keys[session_id] = set()
@@ -88,13 +68,11 @@ def create_session():
 
 
 def get_session(session_id):
-    """Get progress for a specific session"""
     with sessions_lock:
         return sessions.get(session_id)
 
 
 def cleanup_old_sessions(keep_id):
-    """Remove all sessions except the one we want to keep"""
     with sessions_lock:
         to_remove = [sid for sid in sessions if sid != keep_id]
         for sid in to_remove:
@@ -106,7 +84,6 @@ def cleanup_old_sessions(keep_id):
 
 
 def get_working_api_key(session_id):
-    """Get a working API key that hasn't failed for this session"""
     keys = load_api_keys()
     with key_lock:
         failed = session_failed_keys.get(session_id, set())
@@ -117,7 +94,6 @@ def get_working_api_key(session_id):
 
 
 def mark_key_failed(session_id, key):
-    """Mark an API key as failed for this session"""
     with key_lock:
         if session_id not in session_failed_keys:
             session_failed_keys[session_id] = set()
@@ -125,35 +101,52 @@ def mark_key_failed(session_id, key):
 
 
 def is_session_active(session_id):
-    """Check if this session is still the active one (hasn't been superseded)"""
     with active_session_lock:
         return active_session_id == session_id
 
 
-def check_domain_index(domain, session_id):
+def normalize_url(url):
+    """Normalize URL - ensure it has https:// prefix"""
+    url = url.strip()
+    if not url:
+        return url
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    return url
+
+
+def extract_domain(url):
+    """Extract domain from a URL"""
+    try:
+        parsed = urlparse(url)
+        return parsed.netloc or parsed.path.split('/')[0]
+    except:
+        return url
+
+
+def check_url_index(url, session_id):
     """
-    Check if a domain is indexed in Google using site: search.
+    Check if a URL is indexed in Google using site: search.
     Cascades through ALL available API keys on error before giving up.
-    Returns: (domain, is_indexed, result_count, error)
+    Returns: (url, domain, is_indexed, result_count, error)
     """
-    domain = domain.strip().lower()
-    if not domain:
+    if not url:
         return None
 
-    # Remove http/https if present
-    domain = domain.replace('https://', '').replace('http://', '').rstrip('/')
-
-    # If session is no longer active, skip this domain
     if not is_session_active(session_id):
         return None
 
-    payload = {"q": f"site:{domain}"}
+    normalized = normalize_url(url)
+    domain = extract_domain(normalized)
 
-    # Keep trying keys until we run out
+    # Build the site: query with the full path
+    clean = normalized.replace('https://', '').replace('http://', '').rstrip('/')
+    payload = {"q": f"site:{clean}"}
+
     while True:
         api_key = get_working_api_key(session_id)
         if not api_key:
-            return (domain, None, 0, "All API keys exhausted or failed")
+            return (normalized, domain, None, 0, "All API keys exhausted or failed")
 
         headers = {
             'X-API-KEY': api_key,
@@ -168,70 +161,61 @@ def check_domain_index(domain, session_id):
                 organic_results = data.get('organic', [])
                 result_count = len(organic_results)
                 if result_count > 0:
-                    return (domain, True, result_count, None)
+                    return (normalized, domain, True, result_count, None)
                 else:
-                    return (domain, False, 0, None)
+                    return (normalized, domain, False, 0, None)
 
             elif response.status_code in (401, 403, 429):
-                # Key is rate-limited, exhausted, or invalid → mark failed and try next
                 mark_key_failed(session_id, api_key)
-                continue  # loop to try next key
+                continue
 
             else:
-                # Other API error — mark key failed, try next
                 mark_key_failed(session_id, api_key)
                 continue
 
         except requests.exceptions.Timeout:
-            return (domain, None, 0, "Request timeout")
+            return (normalized, domain, None, 0, "Request timeout")
         except requests.exceptions.RequestException as e:
-            return (domain, None, 0, str(e))
+            return (normalized, domain, None, 0, str(e))
         except Exception as e:
-            return (domain, None, 0, str(e))
+            return (normalized, domain, None, 0, str(e))
 
 
-def process_domains(domains, batch_delay, session_id):
-    """
-    Process multiple domains concurrently in batches of 5.
-    Stops early if the session is superseded by a new search.
-    """
-    # Clean and filter domains
-    domains = [d.strip() for d in domains if d.strip()]
-
+def process_urls(urls, batch_delay, session_id, domain_order):
+    """Process URLs in batches of 5"""
     session = get_session(session_id)
     if not session:
         return
 
     with sessions_lock:
-        session['total'] = len(domains)
+        session['total'] = len(urls)
         session['in_progress'] = True
+        session['domain_order'] = domain_order
 
     chunk_size = 5
 
-    for i in range(0, len(domains), chunk_size):
-        # If this session was replaced by a new one, stop processing
+    for i in range(0, len(urls), chunk_size):
         if not is_session_active(session_id):
             with sessions_lock:
                 if session_id in sessions:
                     sessions[session_id]['in_progress'] = False
             return
 
-        chunk = domains[i:i + chunk_size]
+        chunk = urls[i:i + chunk_size]
         start_time = time.time()
 
         with ThreadPoolExecutor(max_workers=chunk_size) as executor:
-            future_to_domain = {
-                executor.submit(check_domain_index, domain, session_id): domain
-                for domain in chunk
+            future_to_url = {
+                executor.submit(check_url_index, url, session_id): url
+                for url in chunk
             }
 
-            for future in as_completed(future_to_domain):
+            for future in as_completed(future_to_url):
                 result = future.result()
-
                 if result is None:
                     continue
 
-                domain, is_indexed, count, error = result
+                url, domain, is_indexed, count, error = result
 
                 with sessions_lock:
                     prog = sessions.get(session_id)
@@ -241,19 +225,23 @@ def process_domains(domains, batch_delay, session_id):
 
                     if error:
                         prog['errors'].append({
+                            'url': url,
                             'domain': domain,
                             'error': error
                         })
                     elif is_indexed:
                         prog['indexed'].append({
+                            'url': url,
                             'domain': domain,
                             'count': count
                         })
                     else:
-                        prog['not_indexed'].append(domain)
+                        prog['not_indexed'].append({
+                            'url': url,
+                            'domain': domain
+                        })
 
-        # Delay between batches (unless this is the last batch)
-        if i + chunk_size < len(domains) and is_session_active(session_id):
+        if i + chunk_size < len(urls) and is_session_active(session_id):
             elapsed = time.time() - start_time
             sleep_time = max(0, batch_delay - elapsed)
             if sleep_time > 0:
@@ -266,19 +254,16 @@ def process_domains(domains, batch_delay, session_id):
 
 @app.route('/')
 def index():
-    """Render the main page"""
     return render_template('index.html')
 
 
 @app.route('/settings')
 def settings():
-    """Render the settings page"""
     return render_template('settings.html')
 
 
 @app.route('/api/keys', methods=['GET'])
 def get_keys():
-    """Get all API keys (masked for security)"""
     keys = load_api_keys()
     masked_keys = []
     for key in keys:
@@ -292,7 +277,6 @@ def get_keys():
 
 @app.route('/api/keys', methods=['POST'])
 def add_key():
-    """Add a new API key"""
     data = request.json
     key = data.get('key', '').strip()
     if not key:
@@ -307,7 +291,6 @@ def add_key():
 
 @app.route('/api/keys/<key>', methods=['DELETE'])
 def delete_key(key):
-    """Delete an API key"""
     keys = load_api_keys()
     if key in keys:
         keys.remove(key)
@@ -316,97 +299,58 @@ def delete_key(key):
     return jsonify({'error': 'API key not found'}), 404
 
 
-@app.route('/api/saved_domains', methods=['GET'])
-def get_saved_domains():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('SELECT domain, count FROM saved_domains ORDER BY domain ASC')
-    rows = c.fetchall()
-    conn.close()
-    return jsonify({'saved': [{'domain': r[0], 'count': r[1]} for r in rows]})
-
-
-@app.route('/api/saved_domains/bulk', methods=['POST'])
-def save_domains_bulk():
-    domains_data = request.json.get('domains', [])
-    if not domains_data:
-        return jsonify({'error': 'No domains provided'}), 400
-
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-
-    added = 0
-    for item in domains_data:
-        domain = item.get('domain')
-        count = item.get('count', 0)
-        if domain:
-            try:
-                c.execute('INSERT OR IGNORE INTO saved_domains (domain, count) VALUES (?, ?)', (domain, count))
-                if c.rowcount > 0:
-                    added += 1
-            except sqlite3.Error:
-                pass
-
-    conn.commit()
-    conn.close()
-    return jsonify({'message': f'Successfully saved {added} domains', 'added': added})
-
-
-@app.route('/api/saved_domains/<path:domain>', methods=['DELETE'])
-def delete_saved_domain(domain):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('DELETE FROM saved_domains WHERE domain = ?', (domain,))
-    deleted = c.rowcount
-    conn.commit()
-    conn.close()
-    if deleted > 0:
-        return jsonify({'message': 'Domain deleted'})
-    return jsonify({'error': 'Domain not found'}), 404
-
-
 @app.route('/check', methods=['POST'])
-def check_domains():
-    """API endpoint to check domains — returns a session_id for tracking"""
+def check_urls_endpoint():
     keys = load_api_keys()
     if not keys:
         return jsonify({'error': 'No API keys configured. Please add API keys in Settings.'}), 400
 
     data = request.json
-    domains_text = data.get('domains', '')
+    urls_text = data.get('urls', '')
     batch_delay = data.get('delay', 10)
 
-    domains = [d.strip() for d in domains_text.strip().split('\n') if d.strip()]
-    if not domains:
-        return jsonify({'error': 'No domains provided'}), 400
+    urls = [u.strip() for u in urls_text.strip().split('\n') if u.strip()]
+    if not urls:
+        return jsonify({'error': 'No URLs provided'}), 400
 
-    # Create a fresh session — this also invalidates any previous session
+    # Normalize and compute domain order (first appearance)
+    normalized_urls = []
+    domain_order = []
+    seen_domains = set()
+    for u in urls:
+        nu = normalize_url(u)
+        normalized_urls.append(nu)
+        d = extract_domain(nu)
+        if d not in seen_domains:
+            seen_domains.add(d)
+            domain_order.append(d)
+
     session_id = create_session()
-
-    # Clean up old sessions to free memory
     cleanup_old_sessions(session_id)
 
-    # Start processing in background thread
-    thread = threading.Thread(target=process_domains, args=(domains, batch_delay, session_id))
+    thread = threading.Thread(
+        target=process_urls,
+        args=(normalized_urls, batch_delay, session_id, domain_order)
+    )
     thread.daemon = True
     thread.start()
 
     return jsonify({
         'message': 'Processing started',
-        'total': len(domains),
-        'session_id': session_id
+        'total': len(normalized_urls),
+        'session_id': session_id,
+        'domain_order': domain_order
     })
 
 
 @app.route('/progress')
 def get_progress():
-    """Get progress for a specific session"""
     session_id = request.args.get('session_id')
     if not session_id:
         return jsonify({
             'total': 0, 'completed': 0,
             'indexed': [], 'not_indexed': [], 'errors': [],
-            'in_progress': False
+            'in_progress': False, 'domain_order': []
         })
 
     session = get_session(session_id)
@@ -414,7 +358,7 @@ def get_progress():
         return jsonify({
             'total': 0, 'completed': 0,
             'indexed': [], 'not_indexed': [], 'errors': [],
-            'in_progress': False
+            'in_progress': False, 'domain_order': []
         })
 
     with sessions_lock:
